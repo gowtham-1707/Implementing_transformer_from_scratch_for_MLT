@@ -1,17 +1,19 @@
-# DA6401 - Assignment 3: Implementing the Transformer for Machine Translation
+# DA6401 Assignment 3 - Transformer for German to English Translation
 
-## Overview
+This project implements a Transformer sequence-to-sequence model from scratch in PyTorch for the Multi30k German to English translation task.
 
-In this assignment, you will implement the landmark architecture from the paper "Attention Is All You Need" from scratch using PyTorch. The goal is to develop a Neural Machine Translation (NMT) system capable of translating text from German to English using the Multi30k dataset.
+## Files
 
-## Project Structure
+- `dataset.py`: Multi30k loading, SpaCy tokenization, vocab creation, and padding collate function.
+- `model.py`: Scaled dot-product attention, multi-head attention, masks, positional encoding, encoder, decoder, and full Transformer.
+- `lr_scheduler.py`: Noam learning-rate scheduler.
+- `train.py`: Label smoothing, epoch loop, greedy decoding, BLEU evaluation, checkpoints, and a basic training entry point.
 
-```text
-assignment3/
-├── requirements.txt
-├── README.md
-├── model.py           # Core Transformer architecture (Encoders, Decoders, Multi-Head Attention)
-├── utils.py           # Label Smoothing, Noam Scheduler, Masking Utilities
-├── dataset.py         # Multi30k dataset loading and spacy tokenization
-├── train.py           # Training loops and Greedy Decoding inference
+## Run
+
+```bash
+pip install -r requirements.txt
+python train.py
 ```
+
+Build vocabularies only from the training split, then reuse them for validation and test splits.
