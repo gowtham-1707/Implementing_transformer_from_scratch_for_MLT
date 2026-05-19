@@ -12,8 +12,11 @@ import gdown
 
 
 def scaled_dot_product_attention(
-    Q: torch.Tensor,K: torch.Tensor,V: torch.Tensor,mask: Optional[torch.Tensor] = None,) -> Tuple[torch.Tensor, torch.Tensor]:
-    
+    Q: torch.Tensor,
+    K: torch.Tensor,
+    V: torch.Tensor,
+    mask: Optional[torch.Tensor] = None,
+) -> Tuple[torch.Tensor, torch.Tensor]:
     scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(Q.size(-1))
     if mask is not None:
         scores = scores.masked_fill(mask, -1e9)
@@ -151,10 +154,20 @@ class Transformer(nn.Module):
     DEFAULT_VOCAB_PATH = "vocab.json"
 
     def __init__(
-        self,src_vocab_size: int = None,tgt_vocab_size: int = None,d_model: int = 512,N: int = 6,
-        num_heads: int = 8,d_ff: int = 2048,dropout: float = 0.1,checkpoint_path: str = None,
-        vocab_path: str = None,checkpoint_url: str = None,vocab_url: str = None,auto_load: bool = True,) -> None:
-        
+        self,
+        src_vocab_size: int = None,
+        tgt_vocab_size: int = None,
+        d_model: int = 512,
+        N: int = 6,
+        num_heads: int = 8,
+        d_ff: int = 2048,
+        dropout: float = 0.1,
+        checkpoint_path: str = None,
+        vocab_path: str = None,
+        checkpoint_url: str = None,
+        vocab_url: str = None,
+        auto_load: bool = True,
+    ) -> None:
         super().__init__()
         checkpoint_path = checkpoint_path or self.DEFAULT_CHECKPOINT_PATH
         vocab_path = vocab_path or self.DEFAULT_VOCAB_PATH
@@ -218,7 +231,10 @@ class Transformer(nn.Module):
     def _load_checkpoint_dict(path):
         if not os.path.exists(path):
             return None
-        return torch.load(path, map_location="cpu")
+        try:
+            return torch.load(path, map_location="cpu", weights_only=False)
+        except TypeError:
+            return torch.load(path, map_location="cpu")
 
     @staticmethod
     def _load_vocab(path):
