@@ -150,8 +150,8 @@ class Decoder(nn.Module):
 class Transformer(nn.Module):
     CHECKPOINT_URL = ""
     VOCAB_URL = ""
-    DEFAULT_CHECKPOINT_PATH = "best_checkpoint.pt"
-    DEFAULT_VOCAB_PATH = "vocab.json"
+    CHECKPOINT_URL = "https://drive.google.com/file/d/1f59ku11WPg5GJeWm9WoVUriuG8S89cWb/view?usp=sharing"
+    VOCAB_URL = "https://drive.google.com/file/d/1hTgI0G6hIYE0WWBrLaFb_W_aIEPiq2R_/view?usp=sharing"
 
     def __init__(
         self,
