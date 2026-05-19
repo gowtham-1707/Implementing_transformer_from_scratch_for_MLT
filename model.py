@@ -284,8 +284,18 @@ class Transformer(nn.Module):
     def forward(self, src, tgt, src_mask, tgt_mask) -> torch.Tensor:
         return self.decode(self.encode(src, src_mask), src_mask, tgt, tgt_mask)
 
+    @staticmethod
+    def _detokenize(tokens):
+        text = " ".join(tokens)
+        for p in [".", ",", "!", "?", ":", ";", "%"]:
+            text = text.replace(" " + p, p)
+        text = text.replace("( ", "(").replace(" )", ")")
+        text = text.replace(" n't", "n't").replace(" 's", "'s").replace(" 're", "'re")
+        text = text.replace(" 'm", "'m").replace(" 've", "'ve").replace(" 'll", "'ll")
+        return text
+
     @torch.no_grad()
-    def infer(self, german_sentence: str, max_len: int = 100) -> str:
+    def infer(self, german_sentence: str, max_len: int = 100, beam_size: int = 5, length_penalty: float = 0.7) -> str:
         self.eval()
         device = next(self.parameters()).device
         tokens = [tok.text.lower() for tok in self.de_tokenizer(german_sentence)]
@@ -294,15 +304,32 @@ class Transformer(nn.Module):
         src_mask = make_src_mask(src, pad_idx=1)
 
         memory = self.encode(src, src_mask)
-        ys = torch.tensor([[2]], dtype=torch.long, device=device)
+        beams = [(torch.tensor([[2]], dtype=torch.long, device=device), 0.0)]
 
         for _ in range(max_len - 1):
-            tgt_mask = make_tgt_mask(ys, pad_idx=1)
-            logits = self.decode(memory, src_mask, ys, tgt_mask)
-            next_id = int(logits[:, -1].argmax(dim=-1).item())
-            ys = torch.cat([ys, torch.tensor([[next_id]], dtype=torch.long, device=device)], dim=1)
-            if next_id == 3:
+            candidates = []
+            finished = True
+            for seq, score in beams:
+                if int(seq[0, -1].item()) == 3:
+                    candidates.append((seq, score))
+                    continue
+                finished = False
+                logits = self.decode(memory, src_mask, seq, make_tgt_mask(seq, pad_idx=1))
+                log_probs = F.log_softmax(logits[:, -1], dim=-1)
+                values, indices = torch.topk(log_probs, beam_size, dim=-1)
+                for value, index in zip(values[0], indices[0]):
+                    next_id = int(index.item())
+                    next_seq = torch.cat([seq, torch.tensor([[next_id]], dtype=torch.long, device=device)], dim=1)
+                    candidates.append((next_seq, score + float(value.item())))
+            beams = sorted(
+                candidates,
+                key=lambda item: item[1] / (item[0].size(1) ** length_penalty),
+                reverse=True,
+            )[:beam_size]
+            if finished:
                 break
+
+        ys = max(beams, key=lambda item: item[1] / (item[0].size(1) ** length_penalty))[0]
 
         words = []
         for idx in ys[0].tolist():
@@ -312,4 +339,4 @@ class Transformer(nn.Module):
                 break
             if idx < len(self.tgt_itos):
                 words.append(self.tgt_itos[idx])
-        return " ".join(words)
+        return self._detokenize(words)
