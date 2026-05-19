@@ -148,8 +148,8 @@ class Decoder(nn.Module):
 
 
 class Transformer(nn.Module):
-    CHECKPOINT_URL = "https://drive.google.com/file/d/1f59ku11WPg5GJeWm9WoVUriuG8S89cWb/view?usp=drive_link"
-    VOCAB_URL = "https://drive.google.com/file/d/1hTgI0G6hIYE0WWBrLaFb_W_aIEPiq2R_/view?usp=drive_link"
+    CHECKPOINT_URL = ""
+    VOCAB_URL = ""
     DEFAULT_CHECKPOINT_PATH = "best_checkpoint.pt"
     DEFAULT_VOCAB_PATH = "vocab.json"
 
@@ -286,13 +286,7 @@ class Transformer(nn.Module):
 
     @staticmethod
     def _detokenize(tokens):
-        text = " ".join(tokens)
-        for p in [".", ",", "!", "?", ":", ";", "%"]:
-            text = text.replace(" " + p, p)
-        text = text.replace("( ", "(").replace(" )", ")")
-        text = text.replace(" n't", "n't").replace(" 's", "'s").replace(" 're", "'re")
-        text = text.replace(" 'm", "'m").replace(" 've", "'ve").replace(" 'll", "'ll")
-        return text
+        return " ".join(tokens)
 
     @torch.no_grad()
     def infer(self, german_sentence: str, max_len: int = 100, beam_size: int = 8, length_penalty: float = 0.8) -> str:
