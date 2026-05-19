@@ -295,7 +295,7 @@ class Transformer(nn.Module):
         return text
 
     @torch.no_grad()
-    def infer(self, german_sentence: str, max_len: int = 100, beam_size: int = 5, length_penalty: float = 0.7) -> str:
+    def infer(self, german_sentence: str, max_len: int = 100, beam_size: int = 8, length_penalty: float = 0.8) -> str:
         self.eval()
         device = next(self.parameters()).device
         tokens = [tok.text.lower() for tok in self.de_tokenizer(german_sentence)]
@@ -316,6 +316,16 @@ class Transformer(nn.Module):
                 finished = False
                 logits = self.decode(memory, src_mask, seq, make_tgt_mask(seq, pad_idx=1))
                 log_probs = F.log_softmax(logits[:, -1], dim=-1)
+                seq_ids = seq[0].tolist()
+                if len(seq_ids) >= 4:
+                    seen_trigrams = {
+                        tuple(seq_ids[i:i + 3])
+                        for i in range(len(seq_ids) - 2)
+                    }
+                    prefix = tuple(seq_ids[-2:])
+                    for token_id in range(log_probs.size(-1)):
+                        if prefix + (token_id,) in seen_trigrams:
+                            log_probs[0, token_id] = -1e9
                 values, indices = torch.topk(log_probs, beam_size, dim=-1)
                 for value, index in zip(values[0], indices[0]):
                     next_id = int(index.item())
