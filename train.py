@@ -1,5 +1,6 @@
 from collections import Counter
 import json
+import shutil
 from typing import Optional
 
 import torch
@@ -167,6 +168,7 @@ def run_training_experiment():
     loss_fn = LabelSmoothingLoss(vocab_size=len(train_dataset.tgt_vocab),pad_idx=PAD,smoothing=config["label_smoothing"])
     
     best_val_loss = float("inf")
+    best_path = None
 
     for epoch in range(config["epochs"]):
         train_loss = run_epoch(train_loader,model,loss_fn,optimizer,scheduler,epoch,is_train=True,device=device)
@@ -180,10 +182,15 @@ def run_training_experiment():
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            save_checkpoint(model,optimizer,scheduler,epoch,path="best_checkpoint.pt")
+            best_path = f"best_checkpoint_epoch_{epoch + 1}.pt"
+            save_checkpoint(model,optimizer,scheduler,epoch,path=best_path)
             save_vocab(train_dataset.src_vocab, train_dataset.tgt_vocab, "vocab.json")
-            wandb.save("best_checkpoint.pt")
-            wandb.save("vocab.json")
+
+    if best_path is not None:
+        shutil.copyfile(best_path, "best_checkpoint.pt")
+        wandb.save("best_checkpoint.pt")
+        wandb.save("vocab.json")
+
     wandb.finish()
 
 

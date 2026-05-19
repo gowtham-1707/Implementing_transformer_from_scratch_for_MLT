@@ -148,10 +148,10 @@ class Decoder(nn.Module):
 
 
 class Transformer(nn.Module):
-    CHECKPOINT_URL = ""
-    VOCAB_URL = ""
-    CHECKPOINT_URL = "https://drive.google.com/file/d/1f59ku11WPg5GJeWm9WoVUriuG8S89cWb/view?usp=sharing"
-    VOCAB_URL = "https://drive.google.com/file/d/1hTgI0G6hIYE0WWBrLaFb_W_aIEPiq2R_/view?usp=sharing"
+    CHECKPOINT_URL = "https://drive.google.com/file/d/1f59ku11WPg5GJeWm9WoVUriuG8S89cWb/view?usp=drive_link"
+    VOCAB_URL = "https://drive.google.com/file/d/1hTgI0G6hIYE0WWBrLaFb_W_aIEPiq2R_/view?usp=drive_link"
+    DEFAULT_CHECKPOINT_PATH = "best_checkpoint.pt"
+    DEFAULT_VOCAB_PATH = "vocab.json"
 
     def __init__(
         self,
@@ -178,8 +178,8 @@ class Transformer(nn.Module):
             vocab_path = os.path.join(base_dir, vocab_path)
 
         if auto_load:
-            self._download_if_needed(vocab_path, vocab_url or self.VOCAB_URL)
-            self._download_if_needed(checkpoint_path, checkpoint_url or self.CHECKPOINT_URL)
+            self._download_if_needed(vocab_path, vocab_url or self.VOCAB_URL, kind="json")
+            self._download_if_needed(checkpoint_path, checkpoint_url or self.CHECKPOINT_URL, kind="torch")
 
         self.src_itos, self.tgt_itos = self._load_vocab(vocab_path)
         self.src_stoi = {tok: i for i, tok in enumerate(self.src_itos)}
@@ -220,8 +220,9 @@ class Transformer(nn.Module):
             self.load_state_dict(ckpt["model_state_dict"])
 
     @staticmethod
-    def _download_if_needed(path, url):
-        if os.path.exists(path) and Transformer._looks_like_torch_file(path):
+    def _download_if_needed(path, url, kind="torch"):
+        checker = Transformer._looks_like_json_file if kind == "json" else Transformer._looks_like_torch_file
+        if os.path.exists(path) and checker(path):
             return
         if os.path.exists(path) and url:
             os.remove(path)
@@ -229,7 +230,10 @@ class Transformer(nn.Module):
             return
         if gdown is None:
             raise ImportError("Install gdown or place the required artifact beside model.py.")
-        gdown.download(url, path, quiet=False, fuzzy=True)
+        try:
+            gdown.download(url, path, quiet=False, fuzzy=True)
+        except TypeError:
+            gdown.download(url, path, quiet=False)
 
     @staticmethod
     def _looks_like_torch_file(path):
@@ -241,13 +245,24 @@ class Transformer(nn.Module):
             return False
 
     @staticmethod
+    def _looks_like_json_file(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                vocab = json.load(f)
+            return "src_itos" in vocab and "tgt_itos" in vocab
+        except (OSError, json.JSONDecodeError):
+            return False
+
+    @staticmethod
     def _load_checkpoint_dict(path):
-        if not os.path.exists(path):
+        if not os.path.exists(path) or not Transformer._looks_like_torch_file(path):
             return None
         try:
             return torch.load(path, map_location="cpu", weights_only=False)
         except TypeError:
             return torch.load(path, map_location="cpu")
+        except Exception:
+            return None
 
     @staticmethod
     def _load_vocab(path):
