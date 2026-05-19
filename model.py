@@ -221,11 +221,24 @@ class Transformer(nn.Module):
 
     @staticmethod
     def _download_if_needed(path, url):
-        if os.path.exists(path) or not url:
+        if os.path.exists(path) and Transformer._looks_like_torch_file(path):
+            return
+        if os.path.exists(path) and url:
+            os.remove(path)
+        if not url:
             return
         if gdown is None:
             raise ImportError("Install gdown or place the required artifact beside model.py.")
         gdown.download(url, path, quiet=False, fuzzy=True)
+
+    @staticmethod
+    def _looks_like_torch_file(path):
+        try:
+            with open(path, "rb") as f:
+                head = f.read(8)
+            return head.startswith(b"PK") or head.startswith(b"\x80")
+        except OSError:
+            return False
 
     @staticmethod
     def _load_checkpoint_dict(path):
