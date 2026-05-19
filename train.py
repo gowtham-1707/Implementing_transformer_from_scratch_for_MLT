@@ -142,9 +142,17 @@ def load_checkpoint(path: str,model: Transformer,optimizer: Optional[torch.optim
 def run_training_experiment():
     
     config = {
-        "batch_size": 64,"epochs": 10,"d_model": 256,"num_layers": 3,
-        "num_heads": 8,"d_ff": 1024,"dropout": 0.1,"warmup_steps": 4000,
-        "label_smoothing": 0.1,"learning_rate": 1.0,}
+    "batch_size": 64,
+    "epochs": 25,
+    "d_model": 256,
+    "num_layers": 4,
+    "num_heads": 8,
+    "d_ff": 1024,
+    "dropout": 0.1,
+    "warmup_steps": 4000,
+    "label_smoothing": 0.1,
+    "learning_rate": 1.0,
+}
 
     wandb.init(
         project="MLT_german_to_english",name="transformer-multi30k-noam",config=config)
