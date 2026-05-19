@@ -148,8 +148,8 @@ class Decoder(nn.Module):
 
 
 class Transformer(nn.Module):
-    CHECKPOINT_URL = "https://drive.google.com/file/d/1f59ku11WPg5GJeWm9WoVUriuG8S89cWb/view?usp=drive_link"
-    VOCAB_URL = "https://drive.google.com/file/d/1hTgI0G6hIYE0WWBrLaFb_W_aIEPiq2R_/view?usp=drive_link"
+    CHECKPOINT_URL = ""
+    VOCAB_URL = ""
     DEFAULT_CHECKPOINT_PATH = "best_checkpoint.pt"
     DEFAULT_VOCAB_PATH = "vocab.json"
 
@@ -286,14 +286,19 @@ class Transformer(nn.Module):
 
     @staticmethod
     def _detokenize(tokens):
-        return " ".join(tokens)
+        text = " ".join(tokens)
+        for p in [".", ",", "!", "?", ":", ";", "%"]:
+            text = text.replace(" " + p, p)
+        text = text.replace("( ", "(").replace(" )", ")")
+        text = text.replace(" n't", "n't").replace(" 's", "'s").replace(" 're", "'re")
+        text = text.replace(" 'm", "'m").replace(" 've", "'ve").replace(" 'll", "'ll")
+        return text
 
     @torch.no_grad()
     def infer(self, german_sentence: str, max_len: int = 100, beam_size: int = 5, length_penalty: float = 0.7) -> str:
         self.eval()
         device = next(self.parameters()).device
         tokens = [tok.text.lower() for tok in self.de_tokenizer(german_sentence)]
-        max_len = min(max_len, max(20, 2 * len(tokens) + 10))
         src_ids = [2] + [self.src_stoi.get(tok, 0) for tok in tokens] + [3]
         src = torch.tensor([src_ids], dtype=torch.long, device=device)
         src_mask = make_src_mask(src, pad_idx=1)
